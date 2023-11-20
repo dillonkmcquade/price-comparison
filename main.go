@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -22,8 +23,17 @@ type Product struct {
 }
 
 type Database struct {
-	mut      *sync.Mutex
+	mut      sync.Mutex
 	products map[string]Product
+}
+
+const IGA_URL string = "https://www.iga.net/en/search"
+
+func setQuery(u *url.URL, k string, v string) *url.URL {
+	q := u.Query()
+	q.Set(k, v)
+	u.RawQuery = q.Encode()
+	return u
 }
 
 func main() {
@@ -37,11 +47,17 @@ func main() {
 
 	// products := []Product{}
 	db := Database{
-		mut:      &sync.Mutex{},
 		products: map[string]Product{},
 	}
 
-	c := colly.NewCollector(
+	igaUrl, err := url.Parse(IGA_URL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	query := "carrots"
+	setQuery(igaUrl, "k", query)
+
+	collector := colly.NewCollector(
 		// Visit only domains: coursera.org, www.coursera.org
 		colly.AllowedDomains("www.iga.net", "iga.net"),
 
@@ -53,19 +69,22 @@ func main() {
 		// Run requests in parallel
 		colly.Async(),
 	)
-	c.AllowURLRevisit = false
+	collector.AllowURLRevisit = false
 
-	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
+	collector.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
 
-	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+	collector.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
-		if strings.HasPrefix(link, "/en/search?k=carrots&page=") {
+
+		setQuery(igaUrl, "page", "")
+		prefix := strings.Join([]string{igaUrl.Path, igaUrl.Query().Encode()}, "?")
+		if strings.HasPrefix(link, prefix) {
 			e.Request.Visit(link)
 		}
 	})
 
-	c.OnHTML(".item-product.js-product", func(e *colly.HTMLElement) {
-		log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL)
+	collector.OnHTML(".item-product.js-product", func(e *colly.HTMLElement) {
+		log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL.String())
 		product := Product{
 			Vendor:               "IGA",
 			Brand:                e.ChildText(".item-product__brand"),
@@ -75,35 +94,31 @@ func main() {
 			Size:                 e.ChildTexts(".item-product__info")[0],
 			PricePerHundredGrams: e.ChildText(".item-product__info > div.text--small"),
 		}
-		id := fmt.Sprintf("%s%s%s", product.Brand, product.Name, product.Price)
-		if _, ok := db.products[id]; !ok {
+		id := fmt.Sprintf("%s-%s-%s", product.Brand, product.Name, product.Price)
+		if _, hasKey := db.products[id]; !hasKey {
 			db.mut.Lock()
 			db.products[id] = product
 			defer db.mut.Unlock()
 		}
 	})
 
-	c.OnRequest(func(r *colly.Request) {
+	collector.OnRequest(func(r *colly.Request) {
 		log.Println("visiting", r.URL.String())
 	})
 
-	err = c.Visit("https://www.iga.net/en/search?k=carrots")
+	err = collector.Visit(igaUrl.String())
 
 	// Wait for goroutines to finish
-	c.Wait()
-
+	collector.Wait()
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 
 	e := json.NewEncoder(file)
-
 	e.SetIndent("", "  ")
-
 	err = e.Encode(db.products)
 	if err != nil {
 		log.Println(err)
 	}
-
-	log.Println("Success")
+	log.Println("Finished")
 }
