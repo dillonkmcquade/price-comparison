@@ -27,7 +27,7 @@ func ScrapeIga(db *database.Database, query string) *Scraper {
 	scraper := &Scraper{
 		Url: *igaUrl,
 	}
-	setQuery(igaUrl, "k", query)
+	setQuery(&scraper.Url, "k", query)
 
 	scraper.Collector = colly.NewCollector(
 		// Visit only domains: coursera.org, www.coursera.org
@@ -48,7 +48,7 @@ func ScrapeIga(db *database.Database, query string) *Scraper {
 	scraper.Collector.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
 
-		setQuery(igaUrl, "page", "")
+		setQuery(&scraper.Url, "page", "")
 		prefix := strings.Join([]string{scraper.Url.Path, scraper.Url.Query().Encode()}, "?")
 		if strings.HasPrefix(link, prefix) {
 			e.Request.Visit(link)

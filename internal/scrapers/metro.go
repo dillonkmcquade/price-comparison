@@ -41,22 +41,22 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 	scraper.Collector.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
 
-		prefix := strings.Join([]string{scraper.Url.Path, scraper.Url.Query().Encode()}, "?")
+		prefix := "/en/online-grocery/search-page-"
 		if strings.HasPrefix(link, prefix) {
 			e.Request.Visit(link)
 		}
 	})
 
-	scraper.Collector.OnHTML(".item-product.js-product", func(e *colly.HTMLElement) {
-		log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL.String())
+	scraper.Collector.OnHTML(".tile-product", func(e *colly.HTMLElement) {
+		// log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL.String())
 		product := &database.Product{
-			Vendor:               "IGA",
-			Brand:                e.ChildText(".item-product__brand"),
-			Price:                e.ChildText("span.price"),
-			Name:                 e.ChildText(".js-ga-productname"),
-			Image:                e.ChildAttr(".js-ga-productimage > img", "src"),
-			Size:                 e.ChildTexts(".item-product__info")[0],
-			PricePerHundredGrams: e.ChildText(".item-product__info > div.text--small"),
+			Vendor:               "metro",
+			Brand:                e.ChildText(".head__brand"),
+			Price:                e.ChildText(".price-update"),
+			Name:                 e.ChildText(".head__title"),
+			Image:                e.ChildAttr(".defaultable-picture > img", "src"),
+			Size:                 e.ChildText(".head__unit-details"),
+			PricePerHundredGrams: e.ChildText(".pricing__secondary-price > span"),
 		}
 		err := db.Insert(product)
 		if err != nil {

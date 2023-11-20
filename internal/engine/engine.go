@@ -1,20 +1,23 @@
 package engine
 
 import (
+	"log"
+
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
 )
 
 type Engine struct {
-	scrapers []scrapers.Scraper
+	scrapers []*scrapers.Scraper
 }
 
 func (e *Engine) Register(c *scrapers.Scraper) {
-	e.scrapers = append(e.scrapers, *c)
+	e.scrapers = append(e.scrapers, c)
 }
 
 func (e *Engine) ScrapeAll() {
 	for _, scraper := range e.scrapers {
-		go scraper.Visit()
+		log.Printf("Scraping %s", scraper.Url.String())
+		scraper.Visit()
 	}
 }
 

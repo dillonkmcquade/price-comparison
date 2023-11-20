@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/dillonkmcquade/price-comparison/internal/database"
+	data "github.com/dillonkmcquade/price-comparison/internal/database"
 	"github.com/dillonkmcquade/price-comparison/internal/engine"
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
 )
@@ -20,7 +20,7 @@ func main() {
 	defer file.Close()
 
 	// Initialize new database
-	db := database.NewDatabase()
+	db := data.NewDatabase()
 
 	engine := engine.NewEngine()
 

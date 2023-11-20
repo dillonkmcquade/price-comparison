@@ -23,14 +23,15 @@ type Database struct {
 }
 
 func (db *Database) Insert(p *Product) error {
-	id := fmt.Sprintf("%s-%s-%s", p.Brand, p.Name, p.Price)
-	if _, hasKey := db.Products[id]; !hasKey {
+	id := fmt.Sprintf("%s-%s-%s-%s", p.Vendor, p.Brand, p.Name, p.Price)
+	_, hasKey := db.Products[id]
+	if !hasKey {
 		db.Mut.Lock()
 		db.Products[id] = *p
 		defer db.Mut.Unlock()
 		return nil
 	} else {
-		return errors.New("Item exists in database already")
+		return errors.New("item exists in database already")
 	}
 }
 
