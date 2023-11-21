@@ -30,7 +30,7 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 		// even if the collector is restarted
 		colly.CacheDir("./cache"),
 		//
-		colly.MaxDepth(4),
+		colly.MaxDepth(2),
 		// Run requests in parallel
 		colly.Async(),
 	)
@@ -49,16 +49,21 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 
 	scraper.Collector.OnHTML(".tile-product", func(e *colly.HTMLElement) {
 		// log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL.String())
+		price, err := strToFloat(e.ChildText(".price-update"))
+		if err != nil {
+			log.Println("error parsing float")
+			return
+		}
 		product := &database.Product{
 			Vendor:               "metro",
 			Brand:                e.ChildText(".head__brand"),
-			Price:                e.ChildText(".price-update"),
+			Price:                price,
 			Name:                 e.ChildText(".head__title"),
 			Image:                e.ChildAttr(".defaultable-picture > img", "src"),
 			Size:                 e.ChildText(".head__unit-details"),
 			PricePerHundredGrams: e.ChildText(".pricing__secondary-price > span"),
 		}
-		err := db.Insert(product)
+		err = db.Insert(product)
 		if err != nil {
 			log.Println(err)
 		}

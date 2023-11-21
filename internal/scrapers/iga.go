@@ -3,6 +3,7 @@ package scrapers
 import (
 	"log"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/dillonkmcquade/price-comparison/internal/database"
@@ -11,11 +12,19 @@ import (
 
 const IGA_URL string = "https://www.iga.net/en/search"
 
+// Adds a query parameter to a url
 func setQuery(u *url.URL, k string, v string) *url.URL {
 	q := u.Query()
 	q.Set(k, v)
 	u.RawQuery = q.Encode()
 	return u
+}
+
+// converts string price `$59.99` to float 59.99
+func strToFloat(s string) (float64, error) {
+	split := strings.Split(s, "$")[1]
+	price, err := strconv.ParseFloat(split, 64)
+	return price, err
 }
 
 // Scrapes IGA and adds items to the db
@@ -30,14 +39,11 @@ func ScrapeIga(db *database.Database, query string) *Scraper {
 	setQuery(&scraper.Url, "k", query)
 
 	scraper.Collector = colly.NewCollector(
-		// Visit only domains: coursera.org, www.coursera.org
 		colly.AllowedDomains("www.iga.net", "iga.net"),
-
 		// Cache responses to prevent multiple download of pages
 		// even if the collector is restarted
 		colly.CacheDir("./cache"),
-		//
-		colly.MaxDepth(4),
+		colly.MaxDepth(2),
 		// Run requests in parallel
 		colly.Async(),
 	)
@@ -57,16 +63,23 @@ func ScrapeIga(db *database.Database, query string) *Scraper {
 
 	scraper.Collector.OnHTML(".item-product.js-product", func(e *colly.HTMLElement) {
 		log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL.String())
+
+		price, err := strToFloat(e.ChildTexts("span.price")[0])
+		if err != nil {
+			log.Println("error parsing float")
+			return
+		}
+
 		product := &database.Product{
 			Vendor:               "IGA",
 			Brand:                e.ChildText(".item-product__brand"),
-			Price:                e.ChildText("span.price"),
+			Price:                price,
 			Name:                 e.ChildText(".js-ga-productname"),
 			Image:                e.ChildAttr(".js-ga-productimage > img", "src"),
 			Size:                 e.ChildTexts(".item-product__info")[0],
 			PricePerHundredGrams: e.ChildText(".item-product__info > div.text--small"),
 		}
-		err := db.Insert(product)
+		err = db.Insert(product)
 		if err != nil {
 			log.Println(err)
 		}
