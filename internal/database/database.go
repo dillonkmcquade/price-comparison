@@ -17,36 +17,56 @@ type Product struct {
 	PricePerHundredGrams string  `json:"pricePerHundredGrams"`
 }
 
-type Database struct {
-	Mut      sync.Mutex
-	Products map[string]Product
+type Database[T any] struct {
+	mut      sync.Mutex
+	products map[string]T
 }
 
-func (db *Database) Insert(p *Product) error {
-	id := fmt.Sprintf("%s-%s-%s-%f", p.Vendor, p.Brand, p.Name, p.Price)
-	_, hasKey := db.Products[id]
+func createId(p interface{}) (string, error) {
+	v, ok := p.(Product)
+	if !ok {
+		return "", errors.New("value not a valid product")
+	}
+	return fmt.Sprintf("%s-%s-%s-%f", v.Vendor, v.Brand, v.Name, v.Price), nil
+}
+
+// Insert product to database, returns error if an item already exists
+func (db *Database[T]) Insert(p *T) error {
+	id, err := createId(p)
+	if err != nil {
+		return err
+	}
+	_, hasKey := db.products[id]
 	if !hasKey {
-		db.Mut.Lock()
-		db.Products[id] = *p
-		defer db.Mut.Unlock()
+		db.mut.Lock()
+		db.products[id] = *p
+		defer db.mut.Unlock()
 		return nil
 	} else {
 		return errors.New("item exists in database already")
 	}
 }
 
-func NewDatabase() *Database {
-	return &Database{
-		Products: map[string]Product{},
+func NewDatabase[T any]() *Database[T] {
+	return &Database[T]{
+		products: map[string]T{},
 	}
 }
 
-func (db *Database) FindAll() []Product {
-	var productsArray []Product
-	for k, v := range db.Products {
-		v.Id = k
-		productsArray = append(productsArray, v)
+// Returns all items as an array
+func (db *Database[T]) FindAll() []T {
+	var productsArray []T
+	for _, value := range db.products {
+		productsArray = append(productsArray, value)
 	}
-
 	return productsArray
+}
+
+func (db *Database[T]) FindOne(id string) (T, error) {
+	product, hasKey := db.products[id]
+	if hasKey {
+		return product, nil
+	} else {
+		return product, errors.New("item does not exist")
+	}
 }

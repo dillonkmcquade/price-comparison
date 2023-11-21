@@ -11,7 +11,8 @@ import (
 
 const METRO_URL string = "https://www.metro.ca/en/online-grocery/search"
 
-func NewMetroScraper(db *database.Database, query string) *Scraper {
+// Scrapes metro and adds items to the db
+func NewMetroScraper(db *database.Database[database.Product], query string) *Scraper {
 	metroUrl, err := url.Parse(METRO_URL)
 	if err != nil {
 		log.Fatal(err)
@@ -23,13 +24,10 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 	setQuery(&scraper.Url, "filter", query)
 
 	scraper.Collector = colly.NewCollector(
-		// Visit only domains
 		colly.AllowedDomains("www.metro.ca", "metro.ca"),
-
 		// Cache responses to prevent multiple download of pages
 		// even if the collector is restarted
 		colly.CacheDir("./cache"),
-		//
 		colly.MaxDepth(2),
 		// Run requests in parallel
 		colly.Async(),
@@ -48,7 +46,7 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 	})
 
 	scraper.Collector.OnHTML(".tile-product", func(e *colly.HTMLElement) {
-		// log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL.String())
+		log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL.String())
 		price, err := strToFloat(e.ChildText(".price-update"))
 		if err != nil {
 			log.Println("error parsing float")

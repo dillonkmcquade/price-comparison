@@ -20,7 +20,7 @@ func main() {
 	defer file.Close()
 
 	// Initialize new database
-	db := data.NewDatabase()
+	db := data.NewDatabase[data.Product]()
 
 	engine := engine.NewEngine()
 
