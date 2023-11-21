@@ -1,8 +1,6 @@
 package database
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -19,26 +17,18 @@ type Product struct {
 	PricePerHundredGrams string  `json:"pricePerHundredGrams"`
 }
 
-type Database[T any] struct {
+type Database struct {
 	mut      sync.Mutex
-	products map[string]T
+	products map[string]Product
 }
 
 /* This might be obsolete if a database is used */
-func createId[T any](product *T) (string, error) {
-	buf := new(bytes.Buffer)
-	json.NewEncoder(buf).Encode(product)
-	fmt.Println(buf.String())
-	v, ok := any(product).(Product)
-	if ok {
-		return fmt.Sprintf("%s-%s-%s-%f", v.Vendor, v.Brand, v.Name, v.Price), nil
-	} else {
-		return "", errors.New("value not a valid product")
-	}
+func createId(p *Product) (string, error) {
+	return fmt.Sprintf("%s-%s-%s-%f", p.Vendor, p.Brand, p.Name, p.Price), nil
 }
 
 // Insert product to database, returns error if an item already exists
-func (db *Database[T]) Insert(p *T) error {
+func (db *Database) Insert(p *Product) error {
 	id, err := createId(p)
 	if err != nil {
 		return err
@@ -54,22 +44,23 @@ func (db *Database[T]) Insert(p *T) error {
 	}
 }
 
-func NewDatabase[T any]() *Database[T] {
-	return &Database[T]{
-		products: map[string]T{},
+func NewDatabase() *Database {
+	return &Database{
+		products: map[string]Product{},
 	}
 }
 
 // Returns all items as an array
-func (db *Database[T]) FindAll() []T {
-	var productsArray []T
-	for _, value := range db.products {
+func (db *Database) FindAll() []Product {
+	var productsArray []Product
+	for k, value := range db.products {
+		value.Id = k
 		productsArray = append(productsArray, value)
 	}
 	return productsArray
 }
 
-func (db *Database[T]) FindOne(id string) (T, error) {
+func (db *Database) FindOne(id string) (Product, error) {
 	product, hasKey := db.products[id]
 	if hasKey {
 		return product, nil

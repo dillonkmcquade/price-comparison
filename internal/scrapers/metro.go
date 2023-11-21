@@ -12,7 +12,7 @@ import (
 const METRO_URL string = "https://www.metro.ca/en/online-grocery/search"
 
 // Scrapes metro and adds items to the db
-func NewMetroScraper(db *database.Database[database.Product], query string) *Scraper {
+func NewMetroScraper(db *database.Database, query string) *Scraper {
 	metroUrl, err := url.Parse(METRO_URL)
 	if err != nil {
 		log.Fatal(err)

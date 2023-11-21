@@ -20,10 +20,12 @@ func main() {
 	defer file.Close()
 
 	// Initialize new database
-	db := data.NewDatabase[data.Product]()
+	db := data.NewDatabase()
 
+	// Initialize engine (scraper container)
 	engine := engine.NewEngine(db)
 
+	// Register various scraper factories
 	engine.Register(scrapers.ScrapeIga)
 	engine.Register(scrapers.NewMetroScraper)
 
