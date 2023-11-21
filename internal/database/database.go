@@ -1,6 +1,8 @@
 package database
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -22,12 +24,17 @@ type Database[T any] struct {
 	products map[string]T
 }
 
-func createId(p interface{}) (string, error) {
-	v, ok := p.(Product)
-	if !ok {
+/* This might be obsolete if a database is used */
+func createId[T any](product *T) (string, error) {
+	buf := new(bytes.Buffer)
+	json.NewEncoder(buf).Encode(product)
+	fmt.Println(buf.String())
+	v, ok := any(product).(Product)
+	if ok {
+		return fmt.Sprintf("%s-%s-%s-%f", v.Vendor, v.Brand, v.Name, v.Price), nil
+	} else {
 		return "", errors.New("value not a valid product")
 	}
-	return fmt.Sprintf("%s-%s-%s-%f", v.Vendor, v.Brand, v.Name, v.Price), nil
 }
 
 // Insert product to database, returns error if an item already exists

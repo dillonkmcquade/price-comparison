@@ -13,7 +13,7 @@ import (
 const IGA_URL string = "https://www.iga.net/en/search"
 
 // Adds a query parameter to a url
-func setQuery(u *url.URL, k string, v string) *url.URL {
+func SetQuery(u *url.URL, k string, v string) *url.URL {
 	q := u.Query()
 	q.Set(k, v)
 	u.RawQuery = q.Encode()
@@ -36,7 +36,7 @@ func ScrapeIga(db *database.Database[database.Product], query string) *Scraper {
 	scraper := &Scraper{
 		Url: *igaUrl,
 	}
-	setQuery(&scraper.Url, "k", query)
+	SetQuery(&scraper.Url, "k", query)
 
 	scraper.Collector = colly.NewCollector(
 		colly.AllowedDomains("www.iga.net", "iga.net"),
@@ -54,7 +54,7 @@ func ScrapeIga(db *database.Database[database.Product], query string) *Scraper {
 	scraper.Collector.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
 
-		setQuery(&scraper.Url, "page", "")
+		SetQuery(&scraper.Url, "page", "")
 		prefix := strings.Join([]string{scraper.Url.Path, scraper.Url.Query().Encode()}, "?")
 		if strings.HasPrefix(link, prefix) {
 			e.Request.Visit(link)

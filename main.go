@@ -22,13 +22,13 @@ func main() {
 	// Initialize new database
 	db := data.NewDatabase[data.Product]()
 
-	engine := engine.NewEngine()
+	engine := engine.NewEngine(db)
 
-	engine.Register(scrapers.ScrapeIga(db, "carrots"))
-	engine.Register(scrapers.NewMetroScraper(db, "carrots"))
+	engine.Register(scrapers.ScrapeIga)
+	engine.Register(scrapers.NewMetroScraper)
 
 	// Scrape
-	engine.ScrapeAll()
+	engine.ScrapeAll("carrots")
 
 	e := json.NewEncoder(file)
 	e.SetIndent("", "  ")

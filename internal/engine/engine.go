@@ -3,24 +3,37 @@ package engine
 import (
 	"log"
 
+	"github.com/dillonkmcquade/price-comparison/internal/database"
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
 )
 
 type Engine struct {
-	scrapers []*scrapers.Scraper
+	db               *database.Database[database.Product]
+	scraperFunctions []ScraperFunction
 }
 
-func (e *Engine) Register(c *scrapers.Scraper) {
-	e.scrapers = append(e.scrapers, c)
+type ScraperFunction func(*database.Database[database.Product], string) *scrapers.Scraper
+
+// Register a new scraper to the engine
+func (e *Engine) Register(c ScraperFunction) {
+	e.scraperFunctions = append(e.scraperFunctions, c)
 }
 
-func (e *Engine) ScrapeAll() {
-	for _, scraper := range e.scrapers {
-		log.Printf("Scraping %s", scraper.Url.String())
+// Runs all registered scrapers
+func (e *Engine) ScrapeAll(query string) {
+	if len(e.scraperFunctions) == 0 {
+		log.Fatal("No scrapers registered")
+	}
+	for _, scraperFunction := range e.scraperFunctions {
+		scraper := scraperFunction(e.db, query)
 		scraper.Visit()
+		log.Printf("Scraping %s", scraper.Url.String())
 	}
 }
 
-func NewEngine() *Engine {
-	return &Engine{}
+// Create a new instance of an Engine
+func NewEngine(db *database.Database[database.Product]) *Engine {
+	return &Engine{
+		db: db,
+	}
 }

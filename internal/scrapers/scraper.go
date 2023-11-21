@@ -12,6 +12,7 @@ type Scraper struct {
 	Collector *colly.Collector
 }
 
+// Calls the Scraper.Collector.Visit function on the Scraper.Url
 func (s *Scraper) Visit() {
 	err := s.Collector.Visit(s.Url.String())
 	if err != nil {

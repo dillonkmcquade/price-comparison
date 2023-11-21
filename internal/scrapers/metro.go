@@ -21,7 +21,7 @@ func NewMetroScraper(db *database.Database[database.Product], query string) *Scr
 	scraper := &Scraper{
 		Url: *metroUrl,
 	}
-	setQuery(&scraper.Url, "filter", query)
+	SetQuery(&scraper.Url, "filter", query)
 
 	scraper.Collector = colly.NewCollector(
 		colly.AllowedDomains("www.metro.ca", "metro.ca"),
