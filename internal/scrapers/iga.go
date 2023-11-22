@@ -28,7 +28,7 @@ func strToFloat(s string) (float64, error) {
 }
 
 // Scrapes IGA and adds items to the db
-func ScrapeIga(db *database.Database, query string) *Scraper {
+func NewIgaScraper(db *database.Database, query string) *Scraper {
 	igaUrl, err := url.Parse(IGA_URL)
 	if err != nil {
 		log.Fatal(err)
