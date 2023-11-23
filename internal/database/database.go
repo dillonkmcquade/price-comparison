@@ -24,7 +24,7 @@ type Database struct {
 	products *sql.DB
 }
 
-// Insert product to database, returns error if an item already exists
+// Insert product to database, returns error from DB.Exec
 func (db *Database) Insert(p *Product) error {
 	db.mut.Lock()
 	_, err := db.products.Exec(`
@@ -50,7 +50,7 @@ func NewDatabase() *Database {
         image TEXT,
         size CHARACTER VARYING,
         price_per_hundred_grams CHARACTER VARYING,
-        UNIQUE(vendor, brand, name, price)
+        UNIQUE(vendor, brand, name, size)
         )`)
 	if err != nil {
 		log.Fatal(err)
@@ -60,8 +60,8 @@ func NewDatabase() *Database {
 	}
 }
 
-func (db *Database) FindAll() ([]Product, error) {
-	var productsArray []Product
+func (db *Database) FindAll() ([]*Product, error) {
+	var productsArray []*Product
 	rows, err := db.products.Query("SELECT * FROM products")
 	if err != nil {
 		rows.Close()
@@ -69,7 +69,7 @@ func (db *Database) FindAll() ([]Product, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		p := Product{}
+		p := &Product{}
 		err := rows.Scan(&p.Id, &p.Vendor, &p.Brand, &p.Name, &p.Price, &p.Image, &p.Size, &p.PricePerHundredGrams)
 		if err != nil {
 			log.Fatal(err)
@@ -79,8 +79,8 @@ func (db *Database) FindAll() ([]Product, error) {
 	return productsArray, err
 }
 
-func (db *Database) FindOne(id string) (Product, error) {
-	var product Product
+func (db *Database) FindOne(id string) (*Product, error) {
+	var product *Product
 	err := db.products.QueryRow("SELECT * FROM products WHERE id = ?", id).Scan(&product)
 	return product, err
 }

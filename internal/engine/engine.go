@@ -11,14 +11,14 @@ import (
 
 type Engine struct {
 	db               *database.Database
-	scraperFactories []ScraperFactory
+	scraperFactories []*ScraperFactory
 }
 
 type ScraperFactory func(*database.Database, string) *scrapers.Scraper
 
 // Register a new scraper to the engine
 func (e *Engine) Register(f ScraperFactory) {
-	e.scraperFactories = append(e.scraperFactories, f)
+	e.scraperFactories = append(e.scraperFactories, &f)
 }
 
 // Runs all registered scrapers
@@ -26,7 +26,8 @@ func (e *Engine) ScrapeAll(query string) {
 	if len(e.scraperFactories) == 0 {
 		log.Fatal("No scrapers registered\n")
 	}
-	for _, scraperFactory := range e.scraperFactories {
+	for _, v := range e.scraperFactories {
+		scraperFactory := *v
 		scraper := scraperFactory(e.db, query)
 		scraper.Visit()
 	}
