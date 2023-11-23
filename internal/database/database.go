@@ -1,13 +1,15 @@
 package database
 
 import (
-	"errors"
-	"fmt"
+	"database/sql"
+	"log"
 	"sync"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Product struct {
-	Id                   string  `json:"id"`
+	Id                   int     `json:"id"`
 	Vendor               string  `json:"vendor"`
 	Brand                string  `json:"brand"`
 	Name                 string  `json:"name"`
@@ -19,52 +21,66 @@ type Product struct {
 
 type Database struct {
 	mut      sync.Mutex
-	products map[string]Product
-}
-
-/* This might be obsolete if a database is used */
-func createId(p *Product) (string, error) {
-	return fmt.Sprintf("%s-%s-%s-%f", p.Vendor, p.Brand, p.Name, p.Price), nil
+	products *sql.DB
 }
 
 // Insert product to database, returns error if an item already exists
 func (db *Database) Insert(p *Product) error {
-	id, err := createId(p)
-	if err != nil {
-		return err
-	}
-	_, hasKey := db.products[id]
-	if !hasKey {
-		db.mut.Lock()
-		db.products[id] = *p
-		defer db.mut.Unlock()
-		return nil
-	} else {
-		return errors.New("item exists in database already")
-	}
+	db.mut.Lock()
+	_, err := db.products.Exec(`
+        INSERT INTO products 
+            (vendor, brand, name, price, image, size, price_per_hundred_grams)
+        VALUES 
+            (?, ?, ?, ?, ?, ?, ?)`, p.Vendor, p.Brand, p.Name, p.Price, p.Image, p.Size, p.PricePerHundredGrams)
+	db.mut.Unlock()
+	return err
 }
 
 func NewDatabase() *Database {
+	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = db.Exec(`CREATE TABLE products (
+        id INTEGER PRIMARY KEY,
+        vendor VARCHAR(5),
+        brand CHARACTER VARYING,
+        name CHARACTER VARYING,
+        price DOUBLE PRECISION,
+        image TEXT,
+        size CHARACTER VARYING,
+        price_per_hundred_grams CHARACTER VARYING,
+        UNIQUE(vendor, brand, name, price)
+        )`)
+	if err != nil {
+		log.Fatal(err)
+	}
 	return &Database{
-		products: map[string]Product{},
+		products: db,
 	}
 }
 
-// Returns all items as an array
-func (db *Database) FindAll() []Product {
+func (db *Database) FindAll() ([]Product, error) {
 	var productsArray []Product
-	for k, value := range db.products {
-		value.Id = k
-		productsArray = append(productsArray, value)
+	rows, err := db.products.Query("SELECT * FROM products")
+	if err != nil {
+		rows.Close()
+		return productsArray, err
 	}
-	return productsArray
+	defer rows.Close()
+	for rows.Next() {
+		p := Product{}
+		err := rows.Scan(&p.Id, &p.Vendor, &p.Brand, &p.Name, &p.Price, &p.Image, &p.Size, &p.PricePerHundredGrams)
+		if err != nil {
+			log.Fatal(err)
+		}
+		productsArray = append(productsArray, p)
+	}
+	return productsArray, err
 }
 
 func (db *Database) FindOne(id string) (Product, error) {
-	product, hasKey := db.products[id]
-	if hasKey {
-		return product, nil
-	} else {
-		return product, errors.New("item does not exist")
-	}
+	var product Product
+	err := db.products.QueryRow("SELECT * FROM products WHERE id = ?", id).Scan(&product)
+	return product, err
 }

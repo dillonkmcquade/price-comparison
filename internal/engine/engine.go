@@ -17,14 +17,14 @@ type Engine struct {
 type ScraperFactory func(*database.Database, string) *scrapers.Scraper
 
 // Register a new scraper to the engine
-func (e *Engine) Register(c ScraperFactory) {
-	e.scraperFactories = append(e.scraperFactories, c)
+func (e *Engine) Register(f ScraperFactory) {
+	e.scraperFactories = append(e.scraperFactories, f)
 }
 
 // Runs all registered scrapers
 func (e *Engine) ScrapeAll(query string) {
 	if len(e.scraperFactories) == 0 {
-		log.Fatal("No scrapers registered")
+		log.Fatal("No scrapers registered\n")
 	}
 	for _, scraperFactory := range e.scraperFactories {
 		scraper := scraperFactory(e.db, query)
@@ -37,16 +37,20 @@ func (eng *Engine) Write(filePath string) {
 	file, err := os.Create(filePath)
 	if err != nil {
 		log.Fatalf("Cannot create file %q: %s\n", filePath, err)
-		return
 	}
 	defer file.Close()
 
 	e := json.NewEncoder(file)
 	e.SetIndent("", "  ")
-	err = e.Encode(eng.db.FindAll())
+	products, err := eng.db.FindAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = e.Encode(products)
 
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 }
 
