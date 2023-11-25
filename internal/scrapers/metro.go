@@ -52,9 +52,13 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 			log.Println("error parsing float")
 			return
 		}
+		brand := e.ChildText(".head__brand")
+		if brand == "" {
+			brand = "metro"
+		}
 		product := &database.Product{
 			Vendor:               "metro",
-			Brand:                e.ChildText(".head__brand"),
+			Brand:                brand,
 			Price:                price,
 			Name:                 e.ChildText(".head__title"),
 			Image:                e.ChildAttr(".defaultable-picture > img", "src"),

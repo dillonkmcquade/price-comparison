@@ -36,8 +36,8 @@ func (db *Database) Insert(p *Product) error {
 	return err
 }
 
-func NewDatabase() *Database {
-	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+func NewDatabase(dataSourceName string) *Database {
+	db, err := sql.Open("sqlite3", dataSourceName)
 	if err != nil {
 		log.Fatal(err)
 	}

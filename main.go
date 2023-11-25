@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// Initialize new database
-	db := data.NewDatabase()
+	db := data.NewDatabase("file::memory:?cache=shared")
 
 	// Initialize engine (scraper container)
 	engine := engine.NewEngine(db)

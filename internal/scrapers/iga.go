@@ -70,9 +70,13 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 			return
 		}
 
+		brand := e.ChildText(".item-product__brand")
+		if brand == "" {
+			brand = "IGA"
+		}
 		product := &database.Product{
 			Vendor:               "IGA",
-			Brand:                e.ChildText(".item-product__brand"),
+			Brand:                brand,
 			Price:                price,
 			Name:                 e.ChildText(".js-ga-productname"),
 			Image:                e.ChildAttr(".js-ga-productimage > img", "src"),
