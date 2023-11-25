@@ -28,7 +28,7 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 		// Cache responses to prevent multiple download of pages
 		// even if the collector is restarted
 		colly.CacheDir("./cache"),
-		colly.MaxDepth(2),
+		colly.MaxDepth(1),
 		// Run requests in parallel
 		colly.Async(),
 	)
