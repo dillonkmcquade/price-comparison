@@ -62,8 +62,6 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 	})
 
 	scraper.Collector.OnHTML(".item-product.js-product", func(e *colly.HTMLElement) {
-		log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL.String())
-
 		price, err := strToFloat(e.ChildTexts("span.price")[0])
 		if err != nil {
 			log.Println("error parsing float")
@@ -83,10 +81,9 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 			Size:                 e.ChildTexts(".item-product__info")[0],
 			PricePerHundredGrams: e.ChildText(".item-product__info > div.text--small"),
 		}
-		err = db.Insert(product)
-		if err != nil {
-			log.Println(err)
-		}
+
+		/* No need to handle error here, unique constraint failures are expected */
+		db.Insert(product)
 	})
 
 	scraper.Collector.OnRequest(func(r *colly.Request) {

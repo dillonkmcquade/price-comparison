@@ -11,6 +11,7 @@ import (
 
 	data "github.com/dillonkmcquade/price-comparison/internal/database"
 	"github.com/dillonkmcquade/price-comparison/internal/engine"
+	"github.com/dillonkmcquade/price-comparison/internal/handlers"
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
 )
 
@@ -25,24 +26,24 @@ func main() {
 	engine.Register(scrapers.NewIgaScraper)
 	engine.Register(scrapers.NewMetroScraper)
 
-	// Scrape
+	/* // Scrape
 	engine.ScrapeAll("carrots")
 
 	// Write results to file
 	engine.Write("products.json")
-	log.Println("Finished Scraping all items")
+	log.Println("Finished Scraping all items") */
 
 	mux := http.NewServeMux()
 
-	// mux.Handle("/products", )
+	mux.Handle("/products", handlers.NewProductHandler(engine))
 
 	server := &http.Server{
 		Addr:         ":3001",
 		Handler:      mux,
 		ErrorLog:     log.New(os.Stderr, "", log.LstdFlags),
 		IdleTimeout:  120 * time.Second,
-		ReadTimeout:  2 * time.Second,
-		WriteTimeout: 2 * time.Second,
+		ReadTimeout:  1 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	go func() {

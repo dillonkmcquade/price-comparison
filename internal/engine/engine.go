@@ -10,7 +10,7 @@ import (
 )
 
 type Engine struct {
-	db               *database.Database
+	Db               *database.Database
 	scraperFactories []*ScraperFactory
 }
 
@@ -28,7 +28,7 @@ func (e *Engine) ScrapeAll(query string) {
 	}
 	for _, v := range e.scraperFactories {
 		scraperFactory := *v
-		scraper := scraperFactory(e.db, query)
+		scraper := scraperFactory(e.Db, query)
 		scraper.Visit()
 	}
 }
@@ -43,7 +43,7 @@ func (eng *Engine) Write(filePath string) {
 
 	e := json.NewEncoder(file)
 	e.SetIndent("", "  ")
-	products, err := eng.db.FindAll()
+	products, err := eng.Db.FindAll()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,6 +58,6 @@ func (eng *Engine) Write(filePath string) {
 // Create a new instance of an Engine
 func NewEngine(db *database.Database) *Engine {
 	return &Engine{
-		db: db,
+		Db: db,
 	}
 }

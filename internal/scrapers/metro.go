@@ -46,7 +46,6 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 	})
 
 	scraper.Collector.OnHTML(".tile-product", func(e *colly.HTMLElement) {
-		log.Printf("Reading from product %d of page %s", e.Index, e.Request.URL.String())
 		price, err := strToFloat(e.ChildText(".price-update"))
 		if err != nil {
 			log.Println("error parsing float")
@@ -65,10 +64,8 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 			Size:                 e.ChildText(".head__unit-details"),
 			PricePerHundredGrams: e.ChildText(".pricing__secondary-price > span"),
 		}
-		err = db.Insert(product)
-		if err != nil {
-			log.Println(err)
-		}
+		/* No need to handle errors here, unique constraint failures are expected and intentional */
+		db.Insert(product)
 	})
 
 	scraper.Collector.OnRequest(func(r *colly.Request) {

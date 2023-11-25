@@ -79,8 +79,27 @@ func (db *Database) FindAll() ([]*Product, error) {
 	return productsArray, err
 }
 
-func (db *Database) FindOne(id string) (*Product, error) {
+func (db *Database) FindById(id string) (*Product, error) {
 	var product *Product
 	err := db.products.QueryRow("SELECT * FROM products WHERE id = ?", id).Scan(&product)
 	return product, err
+}
+
+func (db *Database) FindByName(name string) ([]*Product, error) {
+	var products []*Product
+	rows, err := db.products.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 25`, name)
+	if err != nil {
+		rows.Close()
+		return products, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		p := &Product{}
+		err := rows.Scan(&p.Id, &p.Vendor, &p.Brand, &p.Name, &p.Price, &p.Image, &p.Size, &p.PricePerHundredGrams)
+		if err != nil {
+			log.Fatal(err)
+		}
+		products = append(products, p)
+	}
+	return products, err
 }
