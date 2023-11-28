@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	// Initialize new database
+	// Initialize a new database
 	db := data.NewDatabase("file::memory:?cache=shared")
 
 	// Initialize engine (scraper container)
@@ -26,16 +26,9 @@ func main() {
 	engine.Register(scrapers.NewIgaScraper)
 	engine.Register(scrapers.NewMetroScraper)
 
-	/* // Scrape
-	engine.ScrapeAll("carrots")
-
-	// Write results to file
-	engine.Write("products.json")
-	log.Println("Finished Scraping all items") */
-
+	// HTTP Router
 	mux := http.NewServeMux()
-
-	mux.Handle("/products", handlers.NewProductHandler(engine))
+	mux.Handle("/api/products", handlers.NewProductHandler(engine))
 
 	server := &http.Server{
 		Addr:         ":3001",
@@ -54,13 +47,14 @@ func main() {
 		}
 	}()
 
+	// Listen for interrupt or terminate signals
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	log.Printf("Received %s, commencing graceful shutdown", <-sigChan)
 
+	// Shutdown when signal received
+	log.Printf("Received %s, commencing graceful shutdown", <-sigChan)
 	tc, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
 	if err := server.Shutdown(tc); err != nil {
 		log.Fatalf("Error shutting down server: %s", err)
 	}

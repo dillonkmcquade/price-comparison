@@ -2,7 +2,9 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"math"
 	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -25,15 +27,15 @@ type Database struct {
 }
 
 // Insert product to database, returns error from DB.Exec
-func (db *Database) Insert(p *Product) error {
+func (db *Database) Insert(p *Product) (sql.Result, error) {
 	db.mut.Lock()
-	_, err := db.products.Exec(`
+	result, err := db.products.Exec(`
         INSERT INTO products 
             (vendor, brand, name, price, image, size, price_per_hundred_grams)
         VALUES 
             (?, ?, ?, ?, ?, ?, ?)`, p.Vendor, p.Brand, p.Name, p.Price, p.Image, p.Size, p.PricePerHundredGrams)
 	db.mut.Unlock()
-	return err
+	return result, err
 }
 
 func NewDatabase(dataSourceName string) *Database {
@@ -85,12 +87,31 @@ func (db *Database) FindById(id string) (*Product, error) {
 	return product, err
 }
 
-func (db *Database) FindByName(name string) ([]*Product, error) {
-	var products []*Product
-	rows, err := db.products.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 25`, name)
+type Page struct {
+	Page       int        `json:"page"`
+	TotalPages int        `json:"totalPages"`
+	LastPage   string     `json:"lastPage"`
+	NextPage   string     `json:"nextPage"`
+	Count      int        `json:"count"`
+	Products   []*Product `json:"products"`
+}
+
+func (db *Database) FindByName(name string, page int) (*Page, error) {
+	paginate := &Page{
+		Page: page,
+	}
+	paginate.NextPage = fmt.Sprintf("http://localhost:3001/products?search=%s&page=%d", name, page+1)
+	paginate.LastPage = fmt.Sprintf("http://localhost:3001/products?search=%s&page=%d", name, page-1)
+	if page == 0 {
+		paginate.LastPage = ""
+	}
+
+	var totalItems int
+	err := db.products.QueryRow("SELECT count(*) from products where name like '%' || ? || '%'", name).Scan(&totalItems)
+	rows, err := db.products.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 25 OFFSET ?`, name, page*25)
 	if err != nil {
 		rows.Close()
-		return products, err
+		return paginate, err
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -99,7 +120,14 @@ func (db *Database) FindByName(name string) ([]*Product, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		products = append(products, p)
+		paginate.Products = append(paginate.Products, p)
 	}
-	return products, err
+
+	paginate.Count = len(paginate.Products)
+	paginate.TotalPages = int(math.Ceil(float64(totalItems) / 25.00))
+	if paginate.Count < 25 {
+		paginate.NextPage = ""
+	}
+
+	return paginate, err
 }
