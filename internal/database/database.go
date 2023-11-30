@@ -55,6 +55,7 @@ func NewDatabase(dataSourceName string) *Database {
         UNIQUE(vendor, brand, name, size)
         )`)
 	if err != nil {
+		db.Close()
 		log.Fatal(err)
 	}
 	return &Database{
@@ -98,22 +99,26 @@ type Page struct {
 
 func (db *Database) FindByName(name string, page int) (*Page, error) {
 	paginate := &Page{
-		Page: page,
+		Page:     page,
+		NextPage: fmt.Sprintf("http://localhost:3001/products?search=%s&page=%d", name, page+1),
+		LastPage: fmt.Sprintf("http://localhost:3001/products?search=%s&page=%d", name, page-1),
 	}
-	paginate.NextPage = fmt.Sprintf("http://localhost:3001/products?search=%s&page=%d", name, page+1)
-	paginate.LastPage = fmt.Sprintf("http://localhost:3001/products?search=%s&page=%d", name, page-1)
 	if page == 0 {
 		paginate.LastPage = ""
 	}
 
-	var totalItems int
+	// Get total count of products that match query
+	var totalItems float64
 	err := db.products.QueryRow("SELECT count(*) from products where name like '%' || ? || '%'", name).Scan(&totalItems)
+
+	// Find products that match query
 	rows, err := db.products.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 25 OFFSET ?`, name, page*25)
 	if err != nil {
 		rows.Close()
 		return paginate, err
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		p := &Product{}
 		err := rows.Scan(&p.Id, &p.Vendor, &p.Brand, &p.Name, &p.Price, &p.Image, &p.Size, &p.PricePerHundredGrams)
@@ -124,10 +129,14 @@ func (db *Database) FindByName(name string, page int) (*Page, error) {
 	}
 
 	paginate.Count = len(paginate.Products)
-	paginate.TotalPages = int(math.Ceil(float64(totalItems) / 25.00))
+	paginate.TotalPages = int(math.Ceil(totalItems / 25))
 	if paginate.Count < 25 {
 		paginate.NextPage = ""
 	}
 
 	return paginate, err
+}
+
+func (db *Database) Close() {
+	db.products.Close()
 }

@@ -18,6 +18,7 @@ import (
 func main() {
 	// Initialize a new database
 	db := data.NewDatabase("file::memory:?cache=shared")
+	defer db.Close()
 
 	// Initialize engine (scraper container)
 	engine := engine.NewEngine(db)
