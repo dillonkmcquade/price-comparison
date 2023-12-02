@@ -31,15 +31,21 @@ func (p *ProductHandler) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.engine.ScrapeAll(searchQuery)
-
 	products, err := p.engine.Db.FindByName(searchQuery, page)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	r.Header.Set("Content-Type", "application/json")
+	if len(products.Products) == 0 {
+		p.engine.ScrapeAll(searchQuery)
+	}
+	products, err = p.engine.Db.FindByName(searchQuery, page)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 	err = json.NewEncoder(w).Encode(products)
 	if err != nil {
 		log.Println(err)
