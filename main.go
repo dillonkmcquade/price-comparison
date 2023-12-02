@@ -12,17 +12,9 @@ import (
 	data "github.com/dillonkmcquade/price-comparison/internal/database"
 	"github.com/dillonkmcquade/price-comparison/internal/engine"
 	"github.com/dillonkmcquade/price-comparison/internal/handlers"
+	"github.com/dillonkmcquade/price-comparison/internal/middleware"
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
 )
-
-func cors(next http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-	}
-}
 
 func main() {
 	// Initialize a new database
@@ -36,16 +28,19 @@ func main() {
 	engine.Register(scrapers.NewIgaScraper)
 	engine.Register(scrapers.NewMetroScraper)
 
+	// Create logger
+	log := log.New(os.Stderr, "", log.LstdFlags)
+
 	// HTTP Router
 	mux := http.NewServeMux()
 	mux.Handle("/api/products", handlers.NewProductHandler(engine))
 
-	router := cors(mux)
+	router := middleware.Logger(log, middleware.Cors(mux))
 
 	server := &http.Server{
 		Addr:         ":3001",
 		Handler:      router,
-		ErrorLog:     log.New(os.Stderr, "", log.LstdFlags),
+		ErrorLog:     log,
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  1 * time.Second,
 		WriteTimeout: 10 * time.Second,

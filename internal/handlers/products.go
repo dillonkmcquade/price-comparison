@@ -37,7 +37,7 @@ func (p *ProductHandler) get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	if len(products.Products) == 0 {
+	if len(products.Products) < 10 {
 		p.engine.ScrapeAll(searchQuery)
 	}
 	products, err = p.engine.Db.FindByName(searchQuery, page)

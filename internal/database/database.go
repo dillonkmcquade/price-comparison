@@ -91,6 +91,7 @@ func (db *Database) FindById(id string) (*Product, error) {
 type Page struct {
 	Page       int        `json:"page"`
 	TotalPages int        `json:"totalPages"`
+	TotalItems int        `json:"totalItems"`
 	LastPage   string     `json:"lastPage"`
 	NextPage   string     `json:"nextPage"`
 	Count      int        `json:"count"`
@@ -129,6 +130,7 @@ func (db *Database) FindByName(name string, page int) (*Page, error) {
 	}
 
 	paginate.Count = len(paginate.Products)
+	paginate.TotalItems = int(totalItems)
 	paginate.TotalPages = int(math.Ceil(totalItems / 24))
 	if paginate.Count < 24 {
 		paginate.NextPage = ""
