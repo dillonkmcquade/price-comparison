@@ -56,13 +56,21 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 		if brand == "" {
 			brand = "IGA"
 		}
+
+		var size string
+		sizeSplit := e.ChildTexts(".item-product__info")
+		if len(sizeSplit) == 0 {
+			size = ""
+		} else {
+			size = sizeSplit[0]
+		}
 		product := &database.Product{
 			Vendor:               "IGA",
 			Brand:                brand,
 			Price:                price,
 			Name:                 e.ChildText(".js-ga-productname"),
 			Image:                e.ChildAttr(".js-ga-productimage > img", "src"),
-			Size:                 e.ChildTexts(".item-product__info")[0],
+			Size:                 size,
 			PricePerHundredGrams: e.ChildText(".item-product__info > div.text--small"),
 		}
 
