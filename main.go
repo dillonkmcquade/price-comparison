@@ -15,6 +15,15 @@ import (
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
 )
 
+func cors(next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Content-Type", "application/json")
+		next.ServeHTTP(w, r)
+	}
+}
+
 func main() {
 	// Initialize a new database
 	db := data.NewDatabase("file::memory:?cache=shared")
@@ -31,9 +40,11 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/api/products", handlers.NewProductHandler(engine))
 
+	router := cors(mux)
+
 	server := &http.Server{
 		Addr:         ":3001",
-		Handler:      mux,
+		Handler:      router,
 		ErrorLog:     log.New(os.Stderr, "", log.LstdFlags),
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  1 * time.Second,

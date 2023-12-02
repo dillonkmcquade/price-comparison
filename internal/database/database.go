@@ -100,8 +100,8 @@ type Page struct {
 func (db *Database) FindByName(name string, page int) (*Page, error) {
 	paginate := &Page{
 		Page:     page,
-		NextPage: fmt.Sprintf("http://localhost:3001/products?search=%s&page=%d", name, page+1),
-		LastPage: fmt.Sprintf("http://localhost:3001/products?search=%s&page=%d", name, page-1),
+		NextPage: fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", name, page+1),
+		LastPage: fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", name, page-1),
 	}
 	if page == 0 {
 		paginate.LastPage = ""
@@ -112,7 +112,7 @@ func (db *Database) FindByName(name string, page int) (*Page, error) {
 	err := db.products.QueryRow("SELECT count(*) from products where name like '%' || ? || '%'", name).Scan(&totalItems)
 
 	// Find products that match query
-	rows, err := db.products.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 25 OFFSET ?`, name, page*25)
+	rows, err := db.products.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 24 OFFSET ?`, name, page*24)
 	if err != nil {
 		rows.Close()
 		return paginate, err
@@ -129,8 +129,8 @@ func (db *Database) FindByName(name string, page int) (*Page, error) {
 	}
 
 	paginate.Count = len(paginate.Products)
-	paginate.TotalPages = int(math.Ceil(totalItems / 25))
-	if paginate.Count < 25 {
+	paginate.TotalPages = int(math.Ceil(totalItems / 24))
+	if paginate.Count < 24 {
 		paginate.NextPage = ""
 	}
 
