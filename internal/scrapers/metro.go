@@ -20,26 +20,26 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 
 	scraper := &Scraper{
 		Url: *metroUrl,
+		Collector: colly.NewCollector(
+			colly.AllowedDomains("www.metro.ca", "metro.ca"),
+			// Cache responses to prevent multiple download of pages
+			// even if the collector is restarted
+			colly.CacheDir("./cache"),
+			colly.MaxDepth(1),
+			// Run requests in parallel
+			colly.Async(),
+		),
 	}
 	SetQuery(&scraper.Url, "filter", query)
 
-	scraper.Collector = colly.NewCollector(
-		colly.AllowedDomains("www.metro.ca", "metro.ca"),
-		// Cache responses to prevent multiple download of pages
-		// even if the collector is restarted
-		colly.CacheDir("./cache"),
-		colly.MaxDepth(1),
-		// Run requests in parallel
-		colly.Async(),
-	)
-	scraper.Collector.AllowURLRevisit = false
+	scraper.AllowURLRevisit = false
 
-	err = scraper.Collector.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
+	err = scraper.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	scraper.Collector.OnHTML("a[href]", func(e *colly.HTMLElement) {
+	scraper.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
 
 		prefix := "/en/online-grocery/search-page-"
@@ -52,7 +52,7 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 		}
 	})
 
-	scraper.Collector.OnHTML(".tile-product", func(e *colly.HTMLElement) {
+	scraper.OnHTML(".tile-product", func(e *colly.HTMLElement) {
 		price, err := strToFloat(e.ChildText(".price-update"))
 		if err != nil {
 			log.Println("error parsing float")
@@ -78,7 +78,7 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 		}
 	})
 
-	scraper.Collector.OnRequest(func(r *colly.Request) {
+	scraper.OnRequest(func(r *colly.Request) {
 		log.Println("visiting", r.URL.String())
 	})
 

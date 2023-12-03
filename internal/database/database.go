@@ -20,9 +20,9 @@ type Product struct {
 }
 
 type Result struct {
-	TotalProducts int        // The total amount of products that match the keyword
-	RowCount      int        // The amount of rows returned by this query
-	Products      []*Product // A slice of *Product
+	TotalItems int        `json:"totalItems"` // The total amount of products that match the keyword
+	Count      int        `json:"count"`      // The amount of rows returned by this query
+	Products   []*Product `json:"products"`   // A slice of *Product
 }
 
 type Database struct {
@@ -81,7 +81,7 @@ func (db *Database) FindByName(name string, page int) (*Result, error) {
 	if err != nil {
 		return result, err
 	}
-	result.TotalProducts = totalItems
+	result.TotalItems = totalItems
 
 	// Find products that match query
 	rows, err := db.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 24 OFFSET ?`, name, page*24)
@@ -98,6 +98,6 @@ func (db *Database) FindByName(name string, page int) (*Result, error) {
 		}
 		result.Products = append(result.Products, p)
 	}
-	result.RowCount = len(result.Products)
+	result.Count = len(result.Products)
 	return result, err
 }

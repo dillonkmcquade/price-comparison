@@ -20,15 +20,21 @@ func (e *Engine) Register(f ScraperFactory) {
 }
 
 // Runs all registered scrapers
-func (e *Engine) ScrapeAll(query string) {
+func (e *Engine) ScrapeAll(query string) error {
 	if len(e.scraperFactories) == 0 {
 		log.Fatal("No scrapers registered\n")
 	}
+	var err error
 	for _, v := range e.scraperFactories {
 		scraperFactory := *v
 		scraper := scraperFactory(e.Db, query)
-		scraper.Visit()
+		err = scraper.Visit(scraper.Url.String())
+		if err != nil {
+			break
+		}
+		scraper.Wait()
 	}
+	return err
 }
 
 /* // Writes the contents of the db to a file

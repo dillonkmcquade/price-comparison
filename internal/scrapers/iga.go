@@ -19,26 +19,26 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 	}
 	scraper := &Scraper{
 		Url: *igaUrl,
+		Collector: colly.NewCollector(
+			colly.AllowedDomains("www.iga.net", "iga.net"),
+			// Cache responses to prevent multiple download of pages
+			// even if the collector is restarted
+			colly.CacheDir("./cache"),
+			colly.MaxDepth(1),
+			// Run requests in parallel
+			colly.Async(),
+		),
 	}
 	SetQuery(&scraper.Url, "k", query)
 
-	scraper.Collector = colly.NewCollector(
-		colly.AllowedDomains("www.iga.net", "iga.net"),
-		// Cache responses to prevent multiple download of pages
-		// even if the collector is restarted
-		colly.CacheDir("./cache"),
-		colly.MaxDepth(1),
-		// Run requests in parallel
-		colly.Async(),
-	)
-	scraper.Collector.AllowURLRevisit = false
+	scraper.AllowURLRevisit = false
 
-	err = scraper.Collector.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
+	err = scraper.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	scraper.Collector.OnHTML("a[href]", func(e *colly.HTMLElement) {
+	scraper.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
 
 		SetQuery(&scraper.Url, "page", "")
@@ -51,7 +51,7 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 		}
 	})
 
-	scraper.Collector.OnHTML(".item-product.js-product", func(e *colly.HTMLElement) {
+	scraper.OnHTML(".item-product.js-product", func(e *colly.HTMLElement) {
 		price, err := strToFloat(e.ChildTexts("span.price")[0])
 		if err != nil {
 			log.Println("error parsing float")
@@ -88,7 +88,7 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 		}
 	})
 
-	scraper.Collector.OnRequest(func(r *colly.Request) {
+	scraper.OnRequest(func(r *colly.Request) {
 		log.Println("visiting", r.URL.String())
 	})
 

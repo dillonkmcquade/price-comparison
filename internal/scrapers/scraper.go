@@ -1,7 +1,6 @@
 package scrapers
 
 import (
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -10,18 +9,8 @@ import (
 )
 
 type Scraper struct {
-	Url       url.URL
-	Collector *colly.Collector
-}
-
-// Calls the Scraper.Collector.Visit function on the Scraper.Url
-func (s *Scraper) Visit() {
-	err := s.Collector.Visit(s.Url.String())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	s.Collector.Wait()
+	*colly.Collector
+	Url url.URL
 }
 
 // Adds a query parameter to a url
