@@ -1,9 +1,7 @@
 package engine
 
 import (
-	"encoding/json"
 	"log"
-	"os"
 
 	"github.com/dillonkmcquade/price-comparison/internal/database"
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
@@ -33,7 +31,7 @@ func (e *Engine) ScrapeAll(query string) {
 	}
 }
 
-// Writes the contents of the db to a file
+/* // Writes the contents of the db to a file
 func (eng *Engine) Write(filePath string) {
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -53,7 +51,7 @@ func (eng *Engine) Write(filePath string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
+} */
 
 // Create a new instance of an Engine
 func NewEngine(db *database.Database) *Engine {
