@@ -45,7 +45,7 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 		prefix := "/en/online-grocery/search-page-"
 		if strings.HasPrefix(link, prefix) {
 			err = e.Request.Visit(link)
-			if err != nil {
+			if err != nil && err != colly.ErrMaxDepth {
 				log.Fatal(err)
 			}
 

@@ -26,14 +26,14 @@ type Result struct {
 }
 
 type Database struct {
-	mut      sync.Mutex
-	products *sql.DB
+	*sql.DB
+	mut sync.Mutex
 }
 
 // Insert product to database, returns error from DB.Exec
 func (db *Database) Insert(p *Product) (sql.Result, error) {
 	db.mut.Lock()
-	result, err := db.products.Exec(`
+	result, err := db.Exec(`
         INSERT INTO products 
             (vendor, brand, name, price, image, size, price_per_hundred_grams)
         VALUES 
@@ -62,13 +62,13 @@ func NewDatabase(dataSourceName string) *Database {
 		log.Fatal(err)
 	}
 	return &Database{
-		products: db,
+		DB: db,
 	}
 }
 
 // Returns the total row count in the database that contains the keyword
 func (db *Database) findCountByName(name string) (totalItems int, err error) {
-	err = db.products.QueryRow("SELECT count(*) from products where name like '%' || ? || '%'", name).Scan(&totalItems)
+	err = db.QueryRow("SELECT count(*) from products where name like '%' || ? || '%'", name).Scan(&totalItems)
 	return
 }
 
@@ -84,7 +84,7 @@ func (db *Database) FindByName(name string, page int) (*Result, error) {
 	result.TotalProducts = totalItems
 
 	// Find products that match query
-	rows, err := db.products.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 24 OFFSET ?`, name, page*24)
+	rows, err := db.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 24 OFFSET ?`, name, page*24)
 	if err != nil {
 		return result, err
 	}
@@ -100,11 +100,4 @@ func (db *Database) FindByName(name string, page int) (*Result, error) {
 	}
 	result.RowCount = len(result.Products)
 	return result, err
-}
-
-func (db *Database) Close() {
-	err := db.products.Close()
-	if err != nil {
-		log.Println(err)
-	}
 }

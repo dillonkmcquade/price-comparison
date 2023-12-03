@@ -45,7 +45,7 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 		prefix := strings.Join([]string{scraper.Url.Path, scraper.Url.Query().Encode()}, "?")
 		if strings.HasPrefix(link, prefix) {
 			err = e.Request.Visit(link)
-			if err != nil {
+			if err != nil && err != colly.ErrMaxDepth {
 				log.Fatal(err)
 			}
 		}
@@ -82,6 +82,7 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 
 		/* No need to handle error here, unique constraint failures are expected */
 		_, err = db.Insert(product)
+
 		if err != nil {
 			log.Println(err)
 		}
