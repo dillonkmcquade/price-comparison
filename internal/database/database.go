@@ -2,9 +2,7 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
-	"math"
 	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -19,6 +17,12 @@ type Product struct {
 	Image                string  `json:"image"`
 	Size                 string  `json:"size"`
 	PricePerHundredGrams string  `json:"pricePerHundredGrams"`
+}
+
+type Result struct {
+	TotalProducts int        // The total amount of products that match the keyword
+	RowCount      int        // The amount of rows returned by this query
+	Products      []*Product // A slice of *Product
 }
 
 type Database struct {
@@ -63,60 +67,28 @@ func NewDatabase(dataSourceName string) *Database {
 	}
 }
 
-func (db *Database) FindAll() ([]*Product, error) {
-	var productsArray []*Product
-	rows, err := db.products.Query("SELECT * FROM products")
-	if err != nil {
-		rows.Close()
-		return productsArray, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		p := &Product{}
-		err := rows.Scan(&p.Id, &p.Vendor, &p.Brand, &p.Name, &p.Price, &p.Image, &p.Size, &p.PricePerHundredGrams)
-		if err != nil {
-			log.Fatal(err)
-		}
-		productsArray = append(productsArray, p)
-	}
-	return productsArray, err
+// Returns the total row count in the database that contains the keyword
+func (db *Database) findCountByName(name string) (totalItems int, err error) {
+	err = db.products.QueryRow("SELECT count(*) from products where name like '%' || ? || '%'", name).Scan(&totalItems)
+	return
 }
 
-func (db *Database) FindById(id string) (*Product, error) {
-	var product *Product
-	err := db.products.QueryRow("SELECT * FROM products WHERE id = ?", id).Scan(&product)
-	return product, err
-}
-
-type Page struct {
-	Page       int        `json:"page"`
-	TotalPages int        `json:"totalPages"`
-	TotalItems int        `json:"totalItems"`
-	LastPage   string     `json:"lastPage"`
-	NextPage   string     `json:"nextPage"`
-	Count      int        `json:"count"`
-	Products   []*Product `json:"products"`
-}
-
-func (db *Database) FindByName(name string, page int) (*Page, error) {
-	paginate := &Page{
-		Page:     page,
-		NextPage: fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", name, page+1),
-		LastPage: fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", name, page-1),
-	}
-	if page == 0 {
-		paginate.LastPage = ""
-	}
+// Returns the products in the database that contain the keyword
+func (db *Database) FindByName(name string, page int) (*Result, error) {
+	result := &Result{}
 
 	// Get total count of products that match query
-	var totalItems float64
-	err := db.products.QueryRow("SELECT count(*) from products where name like '%' || ? || '%'", name).Scan(&totalItems)
+	totalItems, err := db.findCountByName(name)
+	if err != nil {
+		return result, err
+	}
+	result.TotalProducts = totalItems
 
 	// Find products that match query
 	rows, err := db.products.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 24 OFFSET ?`, name, page*24)
 	if err != nil {
 		rows.Close()
-		return paginate, err
+		return result, err
 	}
 	defer rows.Close()
 
@@ -126,17 +98,10 @@ func (db *Database) FindByName(name string, page int) (*Page, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		paginate.Products = append(paginate.Products, p)
+		result.Products = append(result.Products, p)
 	}
-
-	paginate.Count = len(paginate.Products)
-	paginate.TotalItems = int(totalItems)
-	paginate.TotalPages = int(math.Ceil(totalItems / 24))
-	if paginate.Count < 24 {
-		paginate.NextPage = ""
-	}
-
-	return paginate, err
+	result.RowCount = len(result.Products)
+	return result, err
 }
 
 func (db *Database) Close() {
