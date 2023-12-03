@@ -59,7 +59,6 @@ func NewDatabase(dataSourceName string) *Database {
         UNIQUE(vendor, brand, name, size)
         )`)
 	if err != nil {
-		db.Close()
 		log.Fatal(err)
 	}
 	return &Database{
@@ -87,7 +86,6 @@ func (db *Database) FindByName(name string, page int) (*Result, error) {
 	// Find products that match query
 	rows, err := db.products.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 24 OFFSET ?`, name, page*24)
 	if err != nil {
-		rows.Close()
 		return result, err
 	}
 	defer rows.Close()
@@ -105,5 +103,8 @@ func (db *Database) FindByName(name string, page int) (*Result, error) {
 }
 
 func (db *Database) Close() {
-	db.products.Close()
+	err := db.products.Close()
+	if err != nil {
+		log.Println(err)
+	}
 }

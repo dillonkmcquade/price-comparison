@@ -33,7 +33,10 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 	)
 	scraper.Collector.AllowURLRevisit = false
 
-	scraper.Collector.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
+	err = scraper.Collector.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	scraper.Collector.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
@@ -41,7 +44,10 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 		SetQuery(&scraper.Url, "page", "")
 		prefix := strings.Join([]string{scraper.Url.Path, scraper.Url.Query().Encode()}, "?")
 		if strings.HasPrefix(link, prefix) {
-			e.Request.Visit(link)
+			err = e.Request.Visit(link)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	})
 
@@ -75,7 +81,10 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 		}
 
 		/* No need to handle error here, unique constraint failures are expected */
-		db.Insert(product)
+		_, err = db.Insert(product)
+		if err != nil {
+			log.Println(err)
+		}
 	})
 
 	scraper.Collector.OnRequest(func(r *colly.Request) {

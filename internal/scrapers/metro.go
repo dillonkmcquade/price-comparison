@@ -34,14 +34,21 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 	)
 	scraper.Collector.AllowURLRevisit = false
 
-	scraper.Collector.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
+	err = scraper.Collector.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	scraper.Collector.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
 
 		prefix := "/en/online-grocery/search-page-"
 		if strings.HasPrefix(link, prefix) {
-			e.Request.Visit(link)
+			err = e.Request.Visit(link)
+			if err != nil {
+				log.Fatal(err)
+			}
+
 		}
 	})
 
@@ -65,7 +72,10 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 			PricePerHundredGrams: e.ChildText(".pricing__secondary-price > span"),
 		}
 		/* No need to handle errors here, unique constraint failures are expected and intentional */
-		db.Insert(product)
+		_, err = db.Insert(product)
+		if err != nil {
+			log.Println(err)
+		}
 	})
 
 	scraper.Collector.OnRequest(func(r *colly.Request) {
