@@ -1,28 +1,16 @@
 package handlers
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"strconv"
 
-	"github.com/dillonkmcquade/price-comparison/internal/database"
 	"github.com/dillonkmcquade/price-comparison/internal/engine"
 )
 
 type ProductHandler struct {
 	*engine.Engine
 	queries map[string]string
-}
-
-type Page struct {
-	Page       int    `json:"page"`       // The current page
-	TotalPages int    `json:"totalPages"` // Total number of pages
-	LastPage   string `json:"lastPage"`   // Url used to navigate to page n-1
-	NextPage   string `json:"nextPage"`   // Url used to navigate to page n+1
-	*database.Result
 }
 
 func NewProductHandler(e *engine.Engine) *ProductHandler {
@@ -35,12 +23,12 @@ func NewProductHandler(e *engine.Engine) *ProductHandler {
 func (p *ProductHandler) get(w http.ResponseWriter, r *http.Request) {
 	// Validate query parameters
 	searchQuery := r.URL.Query().Get("search")
-	if searchQuery == "" {
-		http.Error(w, "Missing search parameters", http.StatusNotFound)
+	pageNumber, err := strconv.ParseUint(r.URL.Query().Get("page"), 10, 0)
+	if err != nil {
+		http.Error(w, "Invalid page number", http.StatusBadRequest)
 		return
 	}
-	pageNumber, err := strconv.Atoi(r.URL.Query().Get("page"))
-	if err != nil {
+	if searchQuery == "" {
 		http.Error(w, "Missing search parameters", http.StatusNotFound)
 		return
 	}
@@ -70,23 +58,7 @@ func (p *ProductHandler) get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create pagination struct
-	page := &Page{
-		Page:     pageNumber,
-		NextPage: fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", searchQuery, pageNumber+1),
-		LastPage: fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", searchQuery, pageNumber-1),
-		Result:   result,
-	}
-
-	if pageNumber == 0 {
-		page.LastPage = ""
-	}
-	if result.Count < 24 {
-		page.NextPage = ""
-	}
-
-	page.TotalPages = int(math.Ceil(float64(page.TotalItems) / 24))
-
-	err = json.NewEncoder(w).Encode(page)
+	err = result.Paginated().ToJSON(w)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

@@ -2,7 +2,11 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"math"
 	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -19,10 +23,47 @@ type Product struct {
 	PricePerHundredGrams string  `json:"pricePerHundredGrams"`
 }
 
-type Result struct {
+type Page struct {
+	Page       uint64     `json:"page"`       // The current page
+	TotalPages int        `json:"totalPages"` // Total number of pages
+	LastPage   string     `json:"lastPage"`   // Url used to navigate to page n-1
+	NextPage   string     `json:"nextPage"`   // Url used to navigate to page n+1
 	TotalItems int        `json:"totalItems"` // The total amount of products that match the keyword
 	Count      int        `json:"count"`      // The amount of rows returned by this query
 	Products   []*Product `json:"products"`   // A slice of *Product
+}
+
+// Writes the page as JSON to w
+func (p *Page) ToJSON(w io.Writer) error {
+	return json.NewEncoder(w).Encode(p)
+}
+
+type Result struct {
+	TotalItems  int        // The total amount of products that match the keyword
+	Count       int        // The amount of rows returned by this query
+	Products    []*Product // A slice of *Product
+	SearchQuery string     // The keyword contained in the product name
+	pageNumber  uint64     // The current requested page
+}
+
+func (r *Result) Paginated() *Page {
+	page := &Page{
+		Page:       r.pageNumber,
+		NextPage:   fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", r.SearchQuery, r.pageNumber+1),
+		LastPage:   fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", r.SearchQuery, r.pageNumber-1),
+		TotalPages: int(math.Ceil(float64(r.TotalItems) / 24)),
+		TotalItems: r.TotalItems,
+		Count:      r.Count,
+		Products:   r.Products,
+	}
+	if r.pageNumber == 0 {
+		page.LastPage = ""
+	}
+	if r.Count < 24 {
+		page.NextPage = ""
+	}
+
+	return page
 }
 
 type Database struct {
@@ -73,8 +114,11 @@ func (db *Database) findCountByName(name string) (totalItems int, err error) {
 }
 
 // Returns the products in the database that contain the keyword
-func (db *Database) FindByName(name string, page int) (*Result, error) {
-	result := &Result{}
+func (db *Database) FindByName(name string, page uint64) (*Result, error) {
+	result := &Result{
+		pageNumber:  page,
+		SearchQuery: name,
+	}
 
 	// Get total count of products that match query
 	totalItems, err := db.findCountByName(name)
