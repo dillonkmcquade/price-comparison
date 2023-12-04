@@ -50,6 +50,7 @@ func NewIgaScraper(l *slog.Logger, db *database.Database, query string) *Scraper
 			err = e.Request.Visit(link)
 			if err != nil && err != colly.ErrMaxDepth {
 				l.Error("Error visiting link", "error", err, "link", link)
+				os.Exit(1)
 			}
 		}
 	})

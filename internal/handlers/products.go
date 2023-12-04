@@ -23,7 +23,7 @@ func NewProductHandler(e *engine.Engine) *ProductHandler {
 func (p *ProductHandler) get(w http.ResponseWriter, r *http.Request) {
 	// Validate query parameters
 	searchQuery := r.URL.Query().Get("search")
-	pageNumber, err := strconv.ParseUint(r.URL.Query().Get("page"), 10, 0)
+	pageNumber, err := strconv.ParseUint(r.URL.Query().Get("page"), 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid page number", http.StatusBadRequest)
 		return
