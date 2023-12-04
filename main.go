@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,26 +22,30 @@ func main() {
 	db := data.NewDatabase("file::memory:?cache=shared")
 	defer db.Close()
 
+	file, err := os.Create("logs/errors.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create logger
+	l := slog.New(slog.NewJSONHandler(file, nil))
+
 	// Initialize engine (scraper container)
-	engine := engine.NewEngine(db)
+	engine := engine.NewEngine(l, db)
 
 	// Register various scraper factories
 	engine.Register(scrapers.NewIgaScraper)
 	engine.Register(scrapers.NewMetroScraper)
 
-	// Create logger
-	log := log.New(os.Stderr, "", log.LstdFlags)
-
 	// HTTP Router
 	mux := http.NewServeMux()
 	mux.Handle("/api/products", handlers.NewProductHandler(engine))
 
-	router := middleware.Logger(log, middleware.Cors(mux))
+	router := middleware.Logger(middleware.Cors(mux))
 
 	server := &http.Server{
 		Addr:         ":3001",
 		Handler:      router,
-		ErrorLog:     log,
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  1 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -50,7 +55,7 @@ func main() {
 		log.Printf("Listening on port %s", server.Addr)
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			log.Println(err)
+			l.Error("Server error.", err)
 		}
 	}()
 
@@ -63,7 +68,7 @@ func main() {
 	tc, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(tc); err != nil {
-		log.Fatalf("Error shutting down server: %s", err)
+		l.Error("Error shutting down server", "error", err)
 	}
 
 	log.Println("Server shutdown successfully")

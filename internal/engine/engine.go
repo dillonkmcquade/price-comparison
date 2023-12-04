@@ -1,7 +1,8 @@
 package engine
 
 import (
-	"log"
+	"log/slog"
+	"os"
 
 	"github.com/dillonkmcquade/price-comparison/internal/database"
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
@@ -10,9 +11,10 @@ import (
 type Engine struct {
 	Db               *database.Database
 	scraperFactories []*ScraperFactory
+	log              *slog.Logger
 }
 
-type ScraperFactory func(*database.Database, string) *scrapers.Scraper
+type ScraperFactory func(*slog.Logger, *database.Database, string) *scrapers.Scraper
 
 // Register a new scraper to the engine
 func (e *Engine) Register(f ScraperFactory) {
@@ -22,12 +24,13 @@ func (e *Engine) Register(f ScraperFactory) {
 // Runs all registered scrapers
 func (e *Engine) ScrapeAll(query string) error {
 	if len(e.scraperFactories) == 0 {
-		log.Fatal("No scrapers registered\n")
+		e.log.Error("No scrapers registered\n")
+		os.Exit(1)
 	}
 	var err error
 	for _, v := range e.scraperFactories {
 		scraperFactory := *v
-		scraper := scraperFactory(e.Db, query)
+		scraper := scraperFactory(e.log, e.Db, query)
 		err = scraper.Visit(scraper.Url.String())
 		if err != nil {
 			break
@@ -60,8 +63,9 @@ func (eng *Engine) Write(filePath string) {
 } */
 
 // Create a new instance of an Engine
-func NewEngine(db *database.Database) *Engine {
+func NewEngine(logger *slog.Logger, db *database.Database) *Engine {
 	return &Engine{
-		Db: db,
+		Db:  db,
+		log: logger,
 	}
 }

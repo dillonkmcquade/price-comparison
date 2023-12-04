@@ -2,7 +2,9 @@ package scrapers
 
 import (
 	"log"
+	"log/slog"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/dillonkmcquade/price-comparison/internal/database"
@@ -12,10 +14,11 @@ import (
 const METRO_URL string = "https://www.metro.ca/en/online-grocery/search"
 
 // Scrapes metro and adds items to the db
-func NewMetroScraper(db *database.Database, query string) *Scraper {
+func NewMetroScraper(l *slog.Logger, db *database.Database, query string) *Scraper {
 	metroUrl, err := url.Parse(METRO_URL)
 	if err != nil {
-		log.Fatal(err)
+		l.Error("Error parsing url", "error", err, "url", METRO_URL)
+		os.Exit(1)
 	}
 
 	scraper := &Scraper{
@@ -36,7 +39,8 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 
 	err = scraper.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
 	if err != nil {
-		log.Fatal(err)
+		l.Error("colly limit rule error", "error", err)
+		os.Exit(1)
 	}
 
 	scraper.OnHTML("a[href]", func(e *colly.HTMLElement) {
@@ -46,7 +50,8 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 		if strings.HasPrefix(link, prefix) {
 			err = e.Request.Visit(link)
 			if err != nil && err != colly.ErrMaxDepth {
-				log.Fatal(err)
+				l.Error("error visiting link", "error", err, "link", link)
+				os.Exit(1)
 			}
 
 		}
@@ -55,7 +60,7 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 	scraper.OnHTML(".tile-product", func(e *colly.HTMLElement) {
 		price, err := strToFloat(e.ChildText(".price-update"))
 		if err != nil {
-			log.Println("error parsing float")
+			l.Error("error parsing float")
 			return
 		}
 		brand := e.ChildText(".head__brand")
@@ -74,7 +79,7 @@ func NewMetroScraper(db *database.Database, query string) *Scraper {
 		/* No need to handle errors here, unique constraint failures are expected and intentional */
 		_, err = db.Insert(product)
 		if err != nil {
-			log.Println(err)
+			l.Error("error executing database insert", "error", err)
 		}
 	})
 

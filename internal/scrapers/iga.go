@@ -2,7 +2,9 @@ package scrapers
 
 import (
 	"log"
+	"log/slog"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/dillonkmcquade/price-comparison/internal/database"
@@ -12,10 +14,11 @@ import (
 const IGA_URL string = "https://www.iga.net/en/search"
 
 // Scrapes IGA and adds items to the db
-func NewIgaScraper(db *database.Database, query string) *Scraper {
+func NewIgaScraper(l *slog.Logger, db *database.Database, query string) *Scraper {
 	igaUrl, err := url.Parse(IGA_URL)
 	if err != nil {
-		log.Fatal(err)
+		l.Error("Error parsing url", "error", err, "url", IGA_URL)
+		os.Exit(1)
 	}
 	scraper := &Scraper{
 		Url: *igaUrl,
@@ -35,7 +38,7 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 
 	err = scraper.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
 	if err != nil {
-		log.Fatal(err)
+		l.Error("Colly limit rule error", "error", err)
 	}
 
 	scraper.OnHTML("a[href]", func(e *colly.HTMLElement) {
@@ -46,7 +49,7 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 		if strings.HasPrefix(link, prefix) {
 			err = e.Request.Visit(link)
 			if err != nil && err != colly.ErrMaxDepth {
-				log.Fatal(err)
+				l.Error("Error visiting link", "error", err, "link", link)
 			}
 		}
 	})
@@ -54,7 +57,7 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 	scraper.OnHTML(".item-product.js-product", func(e *colly.HTMLElement) {
 		price, err := strToFloat(e.ChildTexts("span.price")[0])
 		if err != nil {
-			log.Println("error parsing float")
+			l.Error("error parsing float", "error", err)
 			return
 		}
 
@@ -84,7 +87,7 @@ func NewIgaScraper(db *database.Database, query string) *Scraper {
 		_, err = db.Insert(product)
 
 		if err != nil {
-			log.Println(err)
+			l.Error("Error executing database Insert", "error", err)
 		}
 	})
 

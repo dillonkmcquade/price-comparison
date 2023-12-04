@@ -92,9 +92,9 @@ func (db *Database) FindByName(name string, page int) (*Result, error) {
 
 	for rows.Next() {
 		p := &Product{}
-		err := rows.Scan(&p.Id, &p.Vendor, &p.Brand, &p.Name, &p.Price, &p.Image, &p.Size, &p.PricePerHundredGrams)
-		if err != nil {
-			log.Fatal(err)
+		e := rows.Scan(&p.Id, &p.Vendor, &p.Brand, &p.Name, &p.Price, &p.Image, &p.Size, &p.PricePerHundredGrams)
+		if e != nil {
+			log.Fatal(e)
 		}
 		result.Products = append(result.Products, p)
 	}
