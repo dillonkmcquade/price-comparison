@@ -8,6 +8,11 @@ import (
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
 )
 
+// # The Engine
+//
+//	The engine is what orchestrates all of the different scrapers and acts
+//	as the container for the database. The register method allows you to
+//	extend the engine to utilise various scraper configs through [engine.ScraperFactory]
 type Engine struct {
 	Db               *database.Database
 	scraperFactories []*ScraperFactory
@@ -39,28 +44,6 @@ func (e *Engine) ScrapeAll(query string) error {
 	}
 	return err
 }
-
-/* // Writes the contents of the db to a file
-func (eng *Engine) Write(filePath string) {
-	file, err := os.Create(filePath)
-	if err != nil {
-		log.Fatalf("Cannot create file %q: %s\n", filePath, err)
-	}
-	defer file.Close()
-
-	e := json.NewEncoder(file)
-	e.SetIndent("", "  ")
-	products, err := eng.Db.FindAll()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = e.Encode(products)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-} */
 
 // Create a new instance of an Engine
 func NewEngine(logger *slog.Logger, db *database.Database) *Engine {

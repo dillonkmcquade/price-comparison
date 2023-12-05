@@ -11,8 +11,6 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-const METRO_URL string = "https://www.metro.ca/en/online-grocery/search"
-
 // Scrapes metro and adds items to the db
 func NewMetroScraper(l *slog.Logger, db *database.Database, query string) *Scraper {
 	metroUrl, err := url.Parse(METRO_URL)

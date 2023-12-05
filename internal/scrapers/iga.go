@@ -11,8 +11,6 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-const IGA_URL string = "https://www.iga.net/en/search"
-
 // Scrapes IGA and adds items to the db
 func NewIgaScraper(l *slog.Logger, db *database.Database, query string) *Scraper {
 	igaUrl, err := url.Parse(IGA_URL)
