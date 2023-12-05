@@ -1,7 +1,6 @@
 package scrapers
 
 import (
-	"log"
 	"log/slog"
 	"net/url"
 	"os"
@@ -79,10 +78,6 @@ func NewMetroScraper(l *slog.Logger, db *database.Database, query string) *Scrap
 		if err != nil {
 			l.Error("error executing database insert", "error", err)
 		}
-	})
-
-	scraper.OnRequest(func(r *colly.Request) {
-		log.Println("visiting", r.URL.String())
 	})
 
 	return scraper

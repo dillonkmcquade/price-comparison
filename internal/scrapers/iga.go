@@ -1,7 +1,6 @@
 package scrapers
 
 import (
-	"log"
 	"log/slog"
 	"net/url"
 	"os"
@@ -88,10 +87,6 @@ func NewIgaScraper(l *slog.Logger, db *database.Database, query string) *Scraper
 		if err != nil {
 			l.Error("Error executing database Insert", "error", err)
 		}
-	})
-
-	scraper.OnRequest(func(r *colly.Request) {
-		log.Println("visiting", r.URL.String())
 	})
 
 	return scraper
