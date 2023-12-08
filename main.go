@@ -22,12 +22,12 @@ func main() {
 	db := data.NewDatabase("file::memory:?cache=shared")
 	defer db.Close()
 
-	file, err := os.Create("logs/errors.json")
+	file, err := os.Create("/tmp/price_comparison_errorLogs.json")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Create logger
+	// Create json structured logger that writes to file above
 	l := slog.New(slog.NewJSONHandler(file, nil))
 
 	// Initialize engine (scraper container)
@@ -39,6 +39,9 @@ func main() {
 
 	// HTTP Router
 	mux := http.NewServeMux()
+	fs := http.FileServer(http.Dir("client/dist/"))
+	mux.Handle("/", fs)
+
 	mux.Handle("/api/products", handlers.NewProductHandler(engine))
 
 	router := middleware.Logger(middleware.Cors(mux))
