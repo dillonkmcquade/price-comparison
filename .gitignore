@@ -1,5 +1,7 @@
 cache
 TODO.md
 
+bin/*
+
 !logs
 logs/errors.json
