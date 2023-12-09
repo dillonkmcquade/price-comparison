@@ -67,7 +67,10 @@ func main() {
 	mux.Use(m.Cors)
 	mux.Handle("/", http.FileServer(http.Dir("./client/dist")))
 	mux.Handle("/assets/*", http.StripPrefix("/assets", assets))
-	mux.Handle("/api/products", handlers.NewProductHandler(engine))
+
+	mux.Route("/api", func(r chi.Router) {
+		r.Handle("/products", handlers.NewProductHandler(engine))
+	})
 
 	server := &http.Server{
 		Addr:         ":3001",
@@ -90,10 +93,10 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// launch browser automatically
-	if err = openBrowser(); err != nil {
+	err = openBrowser()
+	if err != nil {
 		l.Error("failed to open browser", "error", err)
 	}
-
 	// Shutdown when signal received
 	log.Printf("Received %s, commencing graceful shutdown", <-sigChan)
 	tc, cancel := context.WithTimeout(context.Background(), 10*time.Second)

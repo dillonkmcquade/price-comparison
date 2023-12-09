@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/dillonkmcquade/price-comparison/internal/database"
 	"github.com/gocolly/colly/v2"
@@ -33,7 +34,7 @@ func NewIgaScraper(l *slog.Logger, db *database.Database, query string) *Scraper
 
 	scraper.AllowURLRevisit = false
 
-	err = scraper.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2})
+	err = scraper.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2, Delay: 5 * time.Second, RandomDelay: 2 * time.Second})
 	if err != nil {
 		l.Error("Colly limit rule error", "error", err)
 	}
