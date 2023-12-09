@@ -15,8 +15,10 @@ import (
 	data "github.com/dillonkmcquade/price-comparison/internal/database"
 	"github.com/dillonkmcquade/price-comparison/internal/engine"
 	"github.com/dillonkmcquade/price-comparison/internal/handlers"
-	"github.com/dillonkmcquade/price-comparison/internal/middleware"
+	m "github.com/dillonkmcquade/price-comparison/internal/middleware"
 	"github.com/dillonkmcquade/price-comparison/internal/scrapers"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func openBrowser() error {
@@ -42,6 +44,7 @@ func main() {
 	db := data.NewDatabase("file::memory:?cache=shared")
 	defer db.Close()
 
+	// temp file for logging errors
 	file, err := os.CreateTemp("/tmp", "price_comparison_errorLogs-")
 	if err != nil {
 		log.Fatal(err)
@@ -51,24 +54,24 @@ func main() {
 	l := slog.New(slog.NewJSONHandler(file, nil))
 
 	// Initialize engine (scraper container)
-	engine := engine.NewEngine(l, db)
-
 	// Register various scraper factories
+	engine := engine.NewEngine(l, db)
 	engine.Register(scrapers.NewIgaScraper)
 	engine.Register(scrapers.NewMetroScraper)
 
 	// HTTP Router
-	mux := http.NewServeMux()
-	fs := http.FileServer(http.Dir("client/dist/"))
-	mux.Handle("/", fs)
-
+	assets := http.FileServer(http.Dir("./client/dist/assets"))
+	mux := chi.NewRouter()
+	mux.Use(middleware.Logger)
+	mux.Use(middleware.Recoverer)
+	mux.Use(m.Cors)
+	mux.Handle("/", http.FileServer(http.Dir("./client/dist")))
+	mux.Handle("/assets/*", http.StripPrefix("/assets", assets))
 	mux.Handle("/api/products", handlers.NewProductHandler(engine))
-
-	router := middleware.Logger(middleware.Cors(mux))
 
 	server := &http.Server{
 		Addr:         ":3001",
-		Handler:      router,
+		Handler:      mux,
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  1 * time.Second,
 		WriteTimeout: 10 * time.Second,
