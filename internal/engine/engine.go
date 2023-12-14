@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"errors"
 	"log/slog"
 	"os"
 
@@ -38,6 +39,7 @@ func (e *Engine) ScrapeAll(query string) error {
 		scraper := scraperFactory(e.log, e.Db, query)
 		err = scraper.Visit(scraper.Url.String())
 		if err != nil {
+			e.log.Error("Error visiting", "error", err)
 			break
 		}
 		scraper.Wait()
@@ -46,9 +48,15 @@ func (e *Engine) ScrapeAll(query string) error {
 }
 
 // Create a new instance of an Engine
-func NewEngine(logger *slog.Logger, db *database.Database) *Engine {
+func NewEngine(logger *slog.Logger, db *database.Database) (*Engine, error) {
+	if db == nil {
+		return &Engine{}, errors.New("No database connection provided")
+	}
+	if logger == nil {
+		return &Engine{}, errors.New("No database connection provided")
+	}
 	return &Engine{
 		Db:  db,
 		log: logger,
-	}
+	}, nil
 }

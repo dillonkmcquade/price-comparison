@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -45,7 +46,7 @@ func main() {
 	defer db.Close()
 
 	// temp file for logging errors
-	file, err := os.CreateTemp("/tmp", "price_comparison_errorLogs-")
+	file, err := os.CreateTemp("/tmp", fmt.Sprintf("%s-price_comparison_errorLogs-", time.Now().Format(time.RFC3339)))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,7 +56,10 @@ func main() {
 
 	// Initialize engine (scraper container)
 	// Register various scraper factories
-	engine := engine.NewEngine(l, db)
+	engine, err := engine.NewEngine(l, db)
+	if err != nil {
+		log.Fatal(err)
+	}
 	engine.Register(scrapers.NewIgaScraper)
 	engine.Register(scrapers.NewMetroScraper)
 

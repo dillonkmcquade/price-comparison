@@ -5,6 +5,17 @@ import (
 	"testing"
 )
 
+func TestNewScraper(t *testing.T) {
+	scr := NewIgaScraper(nil, nil, "")
+	if scr == nil {
+		t.Error("Scraper should not be nil")
+	}
+	scr2 := NewMetroScraper(nil, nil, "")
+	if scr2 == nil {
+		t.Error("Scraper should not be nil")
+	}
+}
+
 func TestSetQuery(t *testing.T) {
 	url, err := url.Parse("http://localhost:3001/api/products?search=carrots")
 	if err != nil {
@@ -31,3 +42,14 @@ func TestStrToFloat(t *testing.T) {
 		t.Error("Error running strToFloat")
 	}
 }
+
+/* func TestVisit(t *testing.T) {
+	l := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	db := database.NewDatabase(":memory:")
+	scr := NewIgaScraper(l, db, "")
+	err := scr.Visit("carrots")
+	if err != nil {
+		t.Error("error visiting:", err)
+	}
+	scr.Wait()
+} */

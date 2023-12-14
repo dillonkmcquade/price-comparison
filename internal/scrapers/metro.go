@@ -1,6 +1,7 @@
 package scrapers
 
 import (
+	"context"
 	"log/slog"
 	"net/url"
 	"os"
@@ -75,7 +76,7 @@ func NewMetroScraper(l *slog.Logger, db *database.Database, query string) *Scrap
 			PricePerHundredGrams: e.ChildText(".pricing__secondary-price > span"),
 		}
 		/* No need to handle errors here, unique constraint failures are expected and intentional */
-		_, err = db.Insert(product)
+		_, err = db.Insert(context.Background(), product)
 		if err != nil {
 			l.Error("error executing database insert", "error", err)
 		}

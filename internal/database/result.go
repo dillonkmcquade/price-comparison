@@ -17,8 +17,8 @@ type Result struct {
 func (r *Result) Paginated() *Page {
 	page := &Page{
 		Page:       r.pageNumber,
-		NextPage:   fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", r.SearchQuery, r.pageNumber+1),
-		LastPage:   fmt.Sprintf("http://localhost:3001/api/products?search=%s&page=%d", r.SearchQuery, r.pageNumber-1),
+		NextPage:   fmt.Sprintf("/api/products?search=%s&page=%d", r.SearchQuery, r.pageNumber+1),
+		LastPage:   fmt.Sprintf("/api/products?search=%s&page=%d", r.SearchQuery, r.pageNumber-1),
 		TotalPages: int(math.Ceil(float64(r.TotalItems) / 24)),
 		TotalItems: r.TotalItems,
 		Count:      r.Count,

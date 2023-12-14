@@ -45,7 +45,7 @@ func (p *ProductHandler) get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// retrieve items from db
-	result, err := p.Db.FindByName(searchQuery, pageNumber)
+	result, err := p.Db.FindByName(r.Context(), searchQuery, pageNumber)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

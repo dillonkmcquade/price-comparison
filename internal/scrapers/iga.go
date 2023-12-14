@@ -1,6 +1,7 @@
 package scrapers
 
 import (
+	"context"
 	"log/slog"
 	"net/url"
 	"os"
@@ -83,7 +84,7 @@ func NewIgaScraper(l *slog.Logger, db *database.Database, query string) *Scraper
 		}
 
 		/* No need to handle error here, unique constraint failures are expected */
-		_, err = db.Insert(product)
+		_, err = db.Insert(context.Background(), product)
 
 		if err != nil {
 			l.Error("Error executing database Insert", "error", err)

@@ -1,9 +1,11 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"sync"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -25,9 +27,11 @@ type Database struct {
 }
 
 // Insert product to database, returns error from DB.Exec
-func (db *Database) Insert(p *Product) (sql.Result, error) {
+func (db *Database) Insert(ctx context.Context, p *Product) (sql.Result, error) {
+	context, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
 	db.mut.Lock()
-	result, err := db.Exec(`
+	result, err := db.ExecContext(context, `
         INSERT INTO products 
             (vendor, brand, name, price, image, size, price_per_hundred_grams)
         VALUES 
@@ -61,27 +65,31 @@ func NewDatabase(dataSourceName string) *Database {
 }
 
 // Returns the total row count in the database that contains the keyword
-func (db *Database) findCountByName(name string) (totalItems int, err error) {
-	err = db.QueryRow("SELECT count(*) from products where name like '%' || ? || '%'", name).Scan(&totalItems)
+func (db *Database) findCountByName(ctx context.Context, name string) (totalItems int, err error) {
+	context, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	err = db.QueryRowContext(context, "SELECT count(*) from products where name like '%' || ? || '%'", name).Scan(&totalItems)
 	return
 }
 
 // Returns the products in the database that contain the keyword
-func (db *Database) FindByName(name string, page uint64) (*Result, error) {
+func (db *Database) FindByName(ctx context.Context, name string, page uint64) (*Result, error) {
 	result := &Result{
 		pageNumber:  page,
 		SearchQuery: name,
 	}
 
 	// Get total count of products that match query
-	totalItems, err := db.findCountByName(name)
+	totalItems, err := db.findCountByName(ctx, name)
 	if err != nil {
 		return result, err
 	}
 	result.TotalItems = totalItems
 
+	context, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	// Find products that match query
-	rows, err := db.Query(`SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 24 OFFSET ?`, name, page*24)
+	rows, err := db.QueryContext(context, `SELECT * FROM products WHERE name LIKE '%' || ? || '%' ORDER BY price ASC LIMIT 24 OFFSET ?`, name, page*24)
 	if err != nil {
 		return result, err
 	}
